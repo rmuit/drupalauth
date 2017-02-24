@@ -185,6 +185,10 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
     drupal_load('module', 'user');
     drupal_load('module', 'field');
 
+    // Drupal's exception handler does not work if the current directory is not
+    // DRUPAL_ROOT, because decode_entities() includes a file in ./ (only on D6).
+    restore_error_handler();
+    restore_exception_handler();
     chdir($a);
   }
 
@@ -235,7 +239,6 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
 
       // get all the attributes out of the user object
       $userAttrs = get_object_vars($drupaluser);
-      $wrapper = entity_metadata_wrapper('user', $drupaluser->uid);
 
       // define some variables to use as arrays
       $userAttrNames = null;
@@ -251,6 +254,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
         }
 
       }else{
+        $userKeys = array();
         // populate the array of attribute keys
         // populate the attribute naming array
         foreach($this->attributes as $confAttr){
@@ -282,6 +286,8 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
           }
           // Get attributes from user fields.
           else {
+/* D7 specific; we don't support fields.
+            $wrapper = entity_metadata_wrapper('user', $drupaluser->uid);
             try {
               list($field_name, $col_name) = explode(':', "$userKey:");
               // Get value from a specific column from wrapper.
@@ -299,6 +305,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
             catch (Exception $e) {
               watchdog_exception('simplesaml', $e);
             }
+*/
           }
         }
       }
