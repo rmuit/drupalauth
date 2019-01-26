@@ -141,8 +141,8 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
 	 * @param array $config  Configuration.
 	 */
 	public function __construct($info, $config) {
-    assert('is_array($info)');
-    assert('is_array($config)');
+    assert(is_array($info));
+    assert(is_array($config));
 
     /* Call the parent constructor first, as required by the interface. */
     parent::__construct($info, $config);
@@ -331,7 +331,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
 	 * @param array &$state  Information about the current authentication.
 	 */
 	public function authenticate(&$state) {
-		assert('is_array($state)');
+		assert(is_array($state) );
 
 		// Get user. If at this point a cookie is still present (which once was set
 		// by the drupal module), this may be from an older login attempt to another
@@ -410,7 +410,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
 		/*
 		 * The redirect function never returns, so we never get this far.
 		 */
-		assert('FALSE');
+		assert(FALSE);
 	}
 
 
@@ -489,7 +489,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
 		/*
 		 * The completeAuth-function never returns, so we never get this far.
 		 */
-		assert('FALSE');
+		assert(FALSE);
 	}
 
 
@@ -500,7 +500,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
 	 * @param array &$state  The logout state array.
 	 */
 	public function logout(&$state) {
-    assert('is_array($state)');
+    assert(is_array($state));
 
     if (!session_id()) {
       /* session_start not called before. Do it here. */
