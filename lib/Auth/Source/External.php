@@ -1,5 +1,16 @@
 <?php
 
+namespace SimpleSAML\Module\drupalauth\Auth\Source;
+
+use SimpleSAML\Auth\Source;
+use SimpleSAML\Auth\State;
+use SimpleSAML\Configuration;
+use SimpleSAML\Error\BadRequest;
+use SimpleSAML\Error\Exception;
+use SimpleSAML\Module;
+use SimpleSAML\Module\drupalauth\ConfigHelper;
+use SimpleSAML\Utils\HTTP;
+
 /**
  * Drupalath authentication source for using Drupal's login page.
  *
@@ -92,7 +103,7 @@
  * @package drupalauth
  * @version $Id$
  */
-class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
+class External extends Source
 {
 
   /**
@@ -151,7 +162,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
 
 
     /* Get the configuration for this module */
-        $drupalAuthConfig = new sspmod_drupalauth_ConfigHelper(
+        $drupalAuthConfig = new ConfigHelper(
             $config,
             'Authentication source ' . var_export($this->authId, true)
         );
@@ -166,7 +177,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
             define('DRUPAL_ROOT', $drupalAuthConfig->getDrupalroot());
         }
 
-        $ssp_config = SimpleSAML_Configuration::getInstance();
+        $ssp_config = Configuration::getInstance();
         $this->cookie_path = '/' . $ssp_config->getValue('baseurlpath');
         $this->cookie_salt = $ssp_config->getValue('secretsalt');
 
@@ -206,7 +217,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
      *
      * @return array|NULL  The user's attributes, or NULL if the user isn't authenticated.
      *
-     * @throws \SimpleSAML_Error_Exception
+     * @throws \SimpleSAML\Error\Exception
      */
     private function getUser($throw_on_invalid_cookie = TRUE)
     {
@@ -224,7 +235,9 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
                 if (sha1($this->cookie_salt . $arrCookie[1]) == $arrCookie[0]) {
                       $drupaluid = $arrCookie[1];
                 } elseif ($throw_on_invalid_cookie) {
-                      throw new SimpleSAML_Error_Exception('Cookie hash invalid. This indicates either tampering or an out of date drupal4ssp module.');
+                      throw new Exception(
+                          'Cookie hash invalid. This indicates either tampering or an out of date drupal4ssp module.'
+                      );
                 }
             }
         }
@@ -286,9 +299,8 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
                       || is_bool($userAttrs[$userKey]))
                     ) {
                         $attributes[$userAttrNames[$userKey]] = array($userAttrs[$userKey]);
-                    }
-                  // Get attributes from user fields.
-                    else {
+                    } else {
+                        // Get attributes from user fields.
 /* D7 specific; we don't support fields.
                         $wrapper = entity_metadata_wrapper('user', $drupaluser->uid);
                         try {
@@ -298,10 +310,9 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
                                 if ($wrapper->{$field_name}->value()) {
                                     $value = $wrapper->{$field_name}->{$col_name}->value();
                                 }
-                            }
-                    // Default get value from wrapper.
-                            elseif ($wrapper->{$field_name}->value()) {
-                                      $value = $wrapper->{$field_name}->value();
+                            } elseif ($wrapper->{$field_name}->value()) {
+                                // Default get value from wrapper.
+                                $value = $wrapper->{$field_name}->value();
                             }
                             $attributes[$userAttrNames[$userKey]] = is_array($value) ? $value : array($value);
                         } catch (Exception $e) {
@@ -374,14 +385,14 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
          * and restores it in another location, and thus bypasses steps in
          * the authentication process.
          */
-        $stateId = SimpleSAML_Auth_State::saveState($state, 'drupalauth:External');
+        $stateId = State::saveState($state, 'drupalauth:External');
 
         /*
          * Now we generate an URL the user should return to after authentication.
          * We assume that whatever authentication page we send the user to has an
          * option to return the user to a specific page afterwards.
          */
-        $returnTo = SimpleSAML_Module::getModuleURL('drupalauth/resume.php', array(
+        $returnTo = Module::getModuleURL('drupalauth/resume.php', array(
             'State' => $stateId,
         ));
 
@@ -400,7 +411,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
          * Note the 'ReturnTo' parameter. This must most likely be replaced with
          * the real name of the parameter for the login page.
          */
-        SimpleSAML_Utilities::redirect($authPage, array(
+        HTTP::redirectTrustedURL($authPage, array(
             'ReturnTo' => $returnTo,
         ));
 
@@ -427,7 +438,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
          * it in the 'State' request parameter.
          */
         if (!isset($_REQUEST['State'])) {
-            throw new SimpleSAML_Error_BadRequest('Missing "State" parameter.');
+            throw new BadRequest('Missing "State" parameter.');
         }
         $stateId = (string)$_REQUEST['State'];
 
@@ -435,19 +446,19 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
          * Once again, note the second parameter to the loadState function. This must
          * match the string we used in the saveState-call above.
          */
-        $state = SimpleSAML_Auth_State::loadState($stateId, 'drupalauth:External');
+        $state = State::loadState($stateId, 'drupalauth:External');
 
         /*
          * Now we have the $state-array, and can use it to locate the authentication
          * source.
          */
-        $source = SimpleSAML_Auth_Source::getById($state['drupalauth:AuthID']);
+        $source = Source::getById($state['drupalauth:AuthID']);
         if ($source === null) {
             /*
              * The only way this should fail is if we remove or rename the authentication source
              * while the user is at the login page.
              */
-            throw new SimpleSAML_Error_Exception('Could not find authentication source with id ' . $state[self::AUTHID]);
+            throw new Exception('Could not find authentication source with id ' . $state[self::AUTHID]);
         }
 
         /*
@@ -456,7 +467,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
          * change config/authsources.php while an user is logging in.
          */
         if (! ($source instanceof self)) {
-            throw new SimpleSAML_Error_Exception('Authentication source type changed.');
+            throw new Exception('Authentication source type changed.');
         }
 
         /*
@@ -472,7 +483,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
              * Here we simply throw an exception, but we could also redirect the user back to the
              * login page.
              */
-            throw new SimpleSAML_Error_Exception('User not authenticated after login page.');
+            throw new Exception('User not authenticated after login page.');
         }
 
         /*
@@ -481,7 +492,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source
          */
 
         $state['Attributes'] = $attributes;
-        SimpleSAML_Auth_Source::completeAuth($state);
+        Source::completeAuth($state);
 
         /*
          * The completeAuth-function never returns, so we never get this far.
