@@ -239,7 +239,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
       chdir(DRUPAL_ROOT);
 
       // load the user object from Drupal
-      $drupaluser = user_load($drupaluid, TRUE);
+      $drupaluser = user_load($drupaluid);
 
       chdir($current_dir);
 
@@ -331,7 +331,7 @@ class sspmod_drupalauth_Auth_Source_External extends SimpleSAML_Auth_Source {
 	 * @param array &$state  Information about the current authentication.
 	 */
 	public function authenticate(&$state) {
-		assert(is_array($state) );
+		assert(is_array($state));
 
 		// Get user. If at this point a cookie is still present (which once was set
 		// by the drupal module), this may be from an older login attempt to another
